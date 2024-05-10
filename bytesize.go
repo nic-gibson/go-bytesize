@@ -211,3 +211,43 @@ func (b ByteSize) format(format string, unit string, longUnits bool) string {
 	}
 	return fmt.Sprintf(format+shortUnitMap[unitSize], float64(b)/float64(unitSize))
 }
+
+func (b *ByteSize) Bytes() uint64 {
+	return uint64(*b)
+}
+
+func (b *ByteSize) KBytes() float64 {
+	v := *b / KB
+	r := *b % KB
+	return float64(v) + float64(r)/float64(KB)
+}
+
+func (b *ByteSize) MBytes() float64 {
+	v := *b / MB
+	r := *b % MB
+	return float64(v) + float64(r)/float64(MB)
+}
+
+func (b *ByteSize) GBytes() float64 {
+	v := *b / GB
+	r := *b % GB
+	return float64(v) + float64(r)/float64(GB)
+}
+
+func (b *ByteSize) TBytes() float64 {
+	v := *b / TB
+	r := *b % TB
+	return float64(v) + float64(r)/float64(TB)
+}
+
+func (b *ByteSize) PBytes() float64 {
+	v := *b / PB
+	r := *b % PB
+	return float64(v) + float64(r)/float64(PB)
+}
+
+func (b *ByteSize) EBytes() float64 {
+	v := *b / EB
+	r := *b % EB
+	return float64(v) + float64(r)/float64(EB)
+}
