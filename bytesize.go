@@ -117,7 +117,7 @@ func Parse(s string) (ByteSize, error) {
 
 	// Check to see if we split successfully
 	if len(split) != 2 {
-		return 0, errors.New("Unrecognized size suffix")
+		return 0, errors.New("unrecognized size suffix")
 	}
 
 	// Check for MB, MEGABYTE, and MEGABYTES
@@ -148,15 +148,15 @@ func (b *ByteSize) Set(s string) error {
 }
 
 // Satisfy the pflag package Value interface.
-func (b *ByteSize) Type() string { return "byte_size" }
+func (b ByteSize) Type() string { return "byte_size" }
 
 // Satisfy the encoding.TextUnmarshaler interface.
-func (b *ByteSize) UnmarshalText(text []byte) error {
+func (b ByteSize) UnmarshalText(text []byte) error {
 	return b.Set(string(text))
 }
 
 // Satisfy the flag package Getter interface.
-func (b *ByteSize) Get() interface{} { return ByteSize(*b) }
+func (b ByteSize) Get() interface{} { return ByteSize(b) }
 
 // New returns a new ByteSize type set to s.
 func New(s float64) ByteSize {
@@ -212,42 +212,50 @@ func (b ByteSize) format(format string, unit string, longUnits bool) string {
 	return fmt.Sprintf(format+shortUnitMap[unitSize], float64(b)/float64(unitSize))
 }
 
-func (b *ByteSize) Bytes() uint64 {
-	return uint64(*b)
+func (b ByteSize) Bytes() uint64 {
+	return uint64(b)
 }
 
-func (b *ByteSize) KBytes() float64 {
-	v := *b / KB
-	r := *b % KB
-	return float64(v) + float64(r)/float64(KB)
+func (b ByteSize) KiloBytes() float64 {
+	return b.as(KB)
 }
 
-func (b *ByteSize) MBytes() float64 {
-	v := *b / MB
-	r := *b % MB
-	return float64(v) + float64(r)/float64(MB)
+func (b ByteSize) MegaBytes() float64 {
+	return b.as(MB)
 }
 
-func (b *ByteSize) GBytes() float64 {
-	v := *b / GB
-	r := *b % GB
-	return float64(v) + float64(r)/float64(GB)
+func (b ByteSize) GigaBytes() float64 {
+	return b.as(GB)
 }
 
-func (b *ByteSize) TBytes() float64 {
-	v := *b / TB
-	r := *b % TB
-	return float64(v) + float64(r)/float64(TB)
+func (b ByteSize) TeraBytes() float64 {
+	return b.as(TB)
 }
 
-func (b *ByteSize) PBytes() float64 {
-	v := *b / PB
-	r := *b % PB
-	return float64(v) + float64(r)/float64(PB)
+func (b ByteSize) PetaBytes() float64 {
+	return b.as(PB)
 }
 
-func (b *ByteSize) EBytes() float64 {
-	v := *b / EB
-	r := *b % EB
-	return float64(v) + float64(r)/float64(EB)
+func (b ByteSize) ExaBytes() float64 {
+	return b.as(EB)
+}
+
+func (b ByteSize) as(size ByteSize) float64 {
+	v := b / size
+	r := b % size
+	return float64(v) + float64(r)/float64(size)
+}
+
+func (b ByteSize) Round(size ByteSize) ByteSize {
+	v := b / size
+	r := b % size
+	if r > 0 {
+		v++
+	}
+	return v * size
+}
+
+func (b ByteSize) Trunc(size ByteSize) ByteSize {
+	v := b / size
+	return v * size
 }

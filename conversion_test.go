@@ -2,13 +2,14 @@ package bytesize
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Overflow(t *testing.T) {
 	b, err := Parse("1797693134862315708145274237317043567981000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000B")
-	if err == nil || b != 0 {
-		t.Fatal("Max float64 test did not fail")
-	}
+	assert.NotNil(t, err, "Max float test did not fail")
+	assert.Zero(t, b, "Max float test did not fail")
 }
 
 var formatTable = []struct {
@@ -27,9 +28,7 @@ func Test_Format(t *testing.T) {
 	for _, v := range formatTable {
 		bSize := New(v.Bytes)
 		b := bSize.Format("%.0f ", v.Format, false)
-		if b != v.Result {
-			t.Fatalf("Expected %s, received %s", v.Result, b)
-		}
+		assert.Equal(t, v.Result, b)
 	}
 }
 
@@ -50,9 +49,7 @@ var newTable = []struct {
 func Test_New(t *testing.T) {
 	for _, v := range newTable {
 		b := New(v.Bytes)
-		if b.String() != v.Result {
-			t.Fatalf("Expected %s, received %s", v.Result, b)
-		}
+		assert.Equal(t, v.Result, b.String())
 	}
 }
 
@@ -82,9 +79,7 @@ func Test_GlobalFormat(t *testing.T) {
 	LongUnits = true
 	for _, v := range globalFormatTable {
 		b := New(v.Bytes)
-		if b.String() != v.Result {
-			t.Fatalf("Expected %s, received %s", v.Result, b)
-		}
+		assert.Equal(t, v.Result, b.String())
 	}
 	Format = "%.2f"
 	LongUnits = false
@@ -111,11 +106,12 @@ var parseTable = []struct {
 func Test_Parse(t *testing.T) {
 	for _, v := range parseTable {
 		b, err := Parse(v.Input)
-		if err != nil && !v.Fail {
-			t.Fatal(err)
-		}
-		if b.String() != v.Result && !v.Fail {
-			t.Fatalf("Expected %s, received %s", v.Result, b)
+		if v.Fail {
+			assert.Error(t, err)
+			assert.NotEqual(t, v.Result, b.String())
+		} else {
+			assert.Nil(t, err)
+			assert.Equal(t, v.Result, b.String())
 		}
 	}
 }
@@ -123,13 +119,13 @@ func Test_Parse(t *testing.T) {
 func Test_Set(t *testing.T) {
 	for _, v := range parseTable {
 		var b ByteSize
-		var err error
-		err = b.Set(v.Input)
-		if err != nil && !v.Fail {
-			t.Fatal(err)
-		}
-		if b.String() != v.Result && !v.Fail {
-			t.Fatalf("Expected %s, received %s", v.Result, b)
+		err := b.Set(v.Input)
+		if v.Fail {
+			assert.Error(t, err)
+			assert.NotEqual(t, v.Result, b.String())
+		} else {
+			assert.Nil(t, err)
+			assert.Equal(t, v.Result, b.String())
 		}
 	}
 }
@@ -144,13 +140,8 @@ var getTable = []struct {
 func Test_Get(t *testing.T) {
 	for _, v := range getTable {
 		b, err := Parse(v.Input)
-		if err != nil {
-			t.Fatal(err)
-		}
-		get := b.Get()
-		if get != v.Result {
-			t.Fatalf("Expected %s, received %s", v.Result, get)
-		}
+		assert.Nil(t, err)
+		assert.Equal(t, v.Result, b.Get())
 	}
 }
 
@@ -170,14 +161,64 @@ func Test_Math(t *testing.T) {
 		switch v.Function {
 		case '+':
 			total := v.B1 + v.B2
-			if total.String() != v.Result {
-				t.Fatalf("Fail: %s + %s = %s, received %s", v.B1, v.B2, v.Result, total)
-			}
+			assert.Equal(t, v.Result, total.String(), "Fail: %s + %s = %s, received %s", v.B1, v.B2, v.Result, total)
 		case '-':
 			total := v.B1 - v.B2
-			if total.String() != v.Result {
-				t.Fatalf("Fail: %s - %s = %s, received %s", v.B1, v.B2, v.Result, total)
-			}
+			assert.Equal(t, v.Result, total.String(), "Fail: %s - %s = %s, received %s", v.B1, v.B2, v.Result, total)
 		}
+	}
+}
+
+var kbConvTable = []struct {
+	B      ByteSize
+	Result float64
+}{{1024, 1}, {1536, 1.5}, {0, 0}, {MB, 1024}, {MB + KB, 1025}}
+
+func Test_Conv_Kilobytes(t *testing.T) {
+	for _, v := range kbConvTable {
+		assert.Equal(t, v.Result, v.B.KiloBytes())
+	}
+}
+
+var mbConvTable = []struct {
+	B      ByteSize
+	Result float64
+}{{1024, 0.0009765625}, {MB, 1}, {MB + GB, 1025}}
+
+func Test_Conv_Megabytes(t *testing.T) {
+	for _, v := range mbConvTable {
+		assert.Equal(t, v.Result, v.B.MegaBytes())
+	}
+}
+
+var roundTable = []struct {
+	B      ByteSize
+	Result ByteSize
+	Size   ByteSize
+}{
+	{1024, 1024, KB},
+	{1025, 2048, KB},
+	{MB + TB, TB + TB, TB},
+}
+
+func TestRound(t *testing.T) {
+	for _, v := range roundTable {
+		assert.Equal(t, v.Result, v.B.Round(v.Size))
+	}
+}
+
+var truncTable = []struct {
+	B      ByteSize
+	Result ByteSize
+	Size   ByteSize
+}{
+	{1024, 1024, KB},
+	{1025, 1024, KB},
+	{MB + TB, TB, TB},
+}
+
+func TestTrunc(t *testing.T) {
+	for _, v := range truncTable {
+		assert.Equal(t, v.Result, v.B.Trunc(v.Size))
 	}
 }
